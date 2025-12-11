@@ -4,9 +4,8 @@ namespace SpoCustomerOrderCountSync\Subscriber;
 
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
-use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Shopware\Core\Checkout\Customer\Event\CustomerLoginEvent;
+use Shopware\Core\Checkout\Customer\Event\CustomerLoginSuccessEvent;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\System\Customer\CustomerEntity;
 use Psr\Log\LoggerInterface;
@@ -25,47 +24,52 @@ class CustomerOrderCountSyncSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            CustomerLoginEvent::class => 'onCustomerLogin',
+            CustomerLoginSuccessEvent::class => 'onCustomerLogin',
         ];
     }
 
-    public function onCustomerLogin(CustomerLoginEvent $event): void
+    public function onCustomerLogin(CustomerLoginSuccessEvent $event): void
     {
         $context = $event->getSalesChannelContext()->getContext();
-        $customer = $event->getSalesChannelContext()->getCustomer();
+        $customer = $event->getCustomer();
 
         if (!$customer instanceof CustomerEntity) {
             return;
         }
 
-        // Lade Customer mit order_count
-        $criteria = new Criteria([$customer->getId()]);
-        $criteria->addFilter(new EqualsFilter('id', $customer->getId()));
-        $criteria->addFields(['id', 'orderCount']);
+        $orderCount = $customer->getOrderCount();
 
-        $result = $this->customerRepository->search($criteria, $context)->first();
+        if ($orderCount === null) {
+            $criteria = new Criteria([$customer->getId()]);
+            $criteria->addFields(['id', 'orderCount']);
 
-        if (!$result) {
-            $this->logger->warning('Customer not found in repository.', [
-                'customerId' => $customer->getId()
+            $loadedCustomer = $this->customerRepository->search($criteria, $context)->first();
+
+            if (!$loadedCustomer) {
+                $this->logger->warning('Customer not found in repository.', [
+                    'customerId' => $customer->getId(),
+                ]);
+                return;
+            }
+
+            $orderCount = $loadedCustomer->getOrderCount();
+        }
+
+        if ($orderCount === null) {
+            $this->logger->warning('Customer order count is not available.', [
+                'customerId' => $customer->getId(),
             ]);
             return;
         }
 
-        $orderCount = $result->getOrderCount();
-
-        // 📝 Logge den geladenen Wert
-        $this->logger->info('Order count loaded', [
-            'customerId' => $customer->getId(),
-            'orderCount' => $orderCount,
-        ]);
-
         $customFields = $customer->getCustomFields() ?? [];
         $customFields['custom_ordercount_copy'] = $orderCount;
 
-        $this->customerRepository->update([[
-            'id' => $customer->getId(),
-            'customFields' => $customFields,
-        ]], $context);
+        $this->customerRepository->update([
+            [
+                'id' => $customer->getId(),
+                'customFields' => $customFields,
+            ],
+        ], $context);
     }
 }
