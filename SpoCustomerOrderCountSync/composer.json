@@ -1,0 +1,27 @@
+{
+    "name": "spo-customer-order-count-sync/spo-customer-order-count-sync",
+    "description": "spo-customer-order-count-sync/spo-customer-order-count-sync",
+    "type": "shopware-platform-plugin",
+    "version": "1.0.0",
+    "license": "MIT",
+    "require": {
+        "shopware/core": "~6.7.0"
+    },
+    "extra": {
+        "shopware-plugin-class": "SpoCustomerOrderCountSync\\SpoCustomerOrderCountSync",
+        "label": {
+            "de-DE": "Skeleton plugin",
+            "en-GB": "Skeleton plugin"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "SpoCustomerOrderCountSync\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SpoCustomerOrderCountSync\\Tests\\": "tests/"
+        }
+    }
+}
