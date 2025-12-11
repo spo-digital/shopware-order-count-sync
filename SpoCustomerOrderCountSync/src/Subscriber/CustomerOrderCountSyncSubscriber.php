@@ -6,7 +6,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Shopware\Core\System\SalesChannel\Event\SalesChannelContextSwitchEvent;
+use Shopware\Core\Checkout\Customer\Event\CustomerLoginEvent;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\System\Customer\CustomerEntity;
 use Psr\Log\LoggerInterface;
@@ -25,11 +25,11 @@ class CustomerOrderCountSyncSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            SalesChannelContextSwitchEvent::class => 'onSalesChannelContextSwitch',
+            CustomerLoginEvent::class => 'onCustomerLogin',
         ];
     }
 
-    public function onSalesChannelContextSwitch(SalesChannelContextSwitchEvent $event): void
+    public function onCustomerLogin(CustomerLoginEvent $event): void
     {
         $context = $event->getSalesChannelContext()->getContext();
         $customer = $event->getSalesChannelContext()->getCustomer();
